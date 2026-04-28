@@ -1,0 +1,115 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+.eggs/
+*.egg
+*.manifest
+*.spec
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# VS Code
+.vscode/
+.history/
+.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+*.out
+*.err
+
+# Test & coverage
+htmlcov/
+.coverage
+.tox/
+.nox/
+.cache/
+pytest_cache/
+coverage.xml
+*.cover
+
+# Data & reports
+/data/
+/reports/
+*.csv
+*.json
+*.xlsx
+*.h5
+*.parquet
+*.feather
+*.pkl
+*.pickle
+*.db
+*.sqlite
+*.bak
+
+# Models
+/models/
+*.pt
+*.pth
+*.h5
+*.ckpt
+*.onnx
+*.joblib
+*.sav
+
+# Docker
+*.pid
+*.pid.lock
+docker-compose.override.yml
+
+# Build
+build/
+dist/
+*.egg-info/
+*.whl
+
+# Node
+node_modules/
+
+# Misc
+*.swp
+*.swo
+*.tmp
+*.bak
+*.old
+*.orig
+*.rej
+
+# Ignore secrets
+.env
+.env.*
+secrets.*
+.claude
+# Ignore backup and temp files
+*~
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+
+# Ignore experiment folders
+/experiments/
+
+# Ignore duplicate/nested stock-aiml folders
+/stock-aiml/stock-aiml/

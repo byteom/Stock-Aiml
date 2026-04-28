@@ -1,0 +1,49 @@
+# =============================================================================
+# Momentum Strategy Configuration
+# =============================================================================
+strategy:
+  name:                "momentum"
+  description:          "Trend-following momentum strategy using RSI and returns"
+
+  # ── Signal Parameters ─────────────────────────────────────────────────────
+  signal:
+    rsi_buy_threshold:  30           # BUY when RSI drops below this
+    rsi_sell_threshold: 70           # SELL when RSI rises above this
+    lookback_short:      5           # short return window (bars)
+    lookback_long:       20          # long return window (bars)
+    min_return_diff:     0.02        # min short - long return spread to signal
+
+  # ── Position Sizing ──────────────────────────────────────────────────────
+  position_sizing:
+    method:             "equal_weight"  # "equal_weight" | "vol_scaled" | "fixed"
+    max_position_pct:   1.0          # max fraction of capital per trade
+    vol_lookback:       20           # bars for volatility scaling
+
+  # ── Entry / Exit ──────────────────────────────────────────────────────────
+  entry:
+    wait_for_confirm:   true         # require next bar to confirm signal
+    allow_partial_fill: false        # only fill if full size available
+
+  exit:
+    stop_loss_pct:      0.02         # 2% stop-loss (0 = disabled)
+    take_profit_pct:    0.05         # 5% take-profit (0 = disabled)
+    trailing_stop_pct:  0.015        # 1.5% trailing stop (0 = disabled)
+    time_bars:          20           # exit after N bars (0 = disabled)
+
+  # ── Filters ──────────────────────────────────────────────────────────────
+  filters:
+    min_volume_ratio:   0.5          # skip if volume < median * this
+    max_volatility:     0.10         # skip if vol > this threshold
+
+  # ── Risk Management ──────────────────────────────────────────────────────
+  risk:
+    max_drawdown_limit: 0.15         # stop strategy if drawdown exceeds this
+    max_daily_trades:    5           # max trades per day
+    allow_short:         false
+
+# ── Backtester defaults (override via config.yaml) ───────────────────────────
+execution:
+  commission_pct:     0.001
+  slippage_bps:        5
+  latency_ms:          100
+  initial_capital:     1_000_000.0

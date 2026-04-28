@@ -1,0 +1,48 @@
+# =============================================================================
+# Mean Reversion Strategy Configuration
+# =============================================================================
+strategy:
+  name:                "mean_reversion"
+  description:          "Mean reversion strategy using Bollinger Bands and z-score"
+
+  # ── Signal Parameters ─────────────────────────────────────────────────────
+  signal:
+    bb_window:          20           # Bollinger Bands lookback window
+    bb_std:             2.0           # standard deviations for bands
+    z_entry_threshold:   -2.0         # BUY when z-score < this (oversold)
+    z_exit_threshold:    0.5          # SELL when z-score > this (normalized)
+    mean_reversion_span: 5            # expected reversion horizon (bars)
+
+  # ── Position Sizing ──────────────────────────────────────────────────────
+  position_sizing:
+    method:             "vol_scaled"
+    max_position_pct:   1.0
+    vol_lookback:       20
+
+  # ── Entry / Exit ──────────────────────────────────────────────────────────
+  entry:
+    wait_for_confirm:   true
+    allow_partial_fill: false
+
+  exit:
+    stop_loss_pct:      0.03         # wider stop for mean reversion
+    take_profit_pct:    0.02         # smaller target (faster reversion)
+    trailing_stop_pct:  0.0
+    time_bars:          30           # exit after 30 bars if no reversion
+
+  # ── Filters ──────────────────────────────────────────────────────────────
+  filters:
+    min_volume_ratio:   0.5
+    max_volatility:     0.12
+
+  # ── Risk Management ──────────────────────────────────────────────────────
+  risk:
+    max_drawdown_limit: 0.15
+    max_daily_trades:    5
+    allow_short:         true         # mean reversion allows shorting
+
+execution:
+  commission_pct:     0.001
+  slippage_bps:        5
+  latency_ms:          100
+  initial_capital:     1_000_000.0

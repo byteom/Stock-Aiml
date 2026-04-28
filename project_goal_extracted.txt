@@ -1,0 +1,222 @@
+0: roject goal (one sentence)
+1: Build a production-ready backtest + optimization service for stock strategies that (1) simulates realistic execution, (2) detects brittle behaviors via adversarial stress scenarios, (3) uses a temporal GNN to model cross-stock contagion for better state/context, (4) optionally trains a robust RL policy to suggest strategy improvements, and (5) returns human-readable counterfactual explanations (latency, slippage, size tradeoffs) to the trader.
+3: High-level system components (overview)
+4: Data & Preprocessing — synchronized multi-stock minute (or chosen frequency) dataset with engineered features and walk-forward splits.
+5: Temporal GNN (TGNN) — learns time-varying graph of inter-stock influences (lead/lag/contagion) and produces embeddings used by the agent/backtester.
+6: Execution Surrogate — differentiable model of fills/market impact to convert paper orders into realistic executed PnL.
+7: Adversarial Market Generator — generates plausible stress scenarios (liquidity shock, correlated moves) to test and train robust strategies.
+8: Strategy Module
+9: (A) Backtester: accepts trader rules/parameters and simulates with execution surrogate; produces PnL/time series.
+10: (B) Robust RL optimizer (optional): suggests improved parameterization/policy via min–max training against adversary.
+11: Counterfactual Explainability Module — structural causal model + automatic interventions to show what would happen if operational variables (latency, slippage, order size, cost) change.
+12: Report & UI — easy-to-read performance summary, stress-case gallery, counterfactual recommendations, and suggested strategy fixes.
+14: Dataset: what it looks like & how to prepare
+15: Core data (per stock)
+16: timestamp (UTC), open, high, low, close, volume
+17: bid/ask spread or best-bid/best-ask if available (preferred)
+18: trade_count or tick_count (if available)
+19: (optional) LOB snapshots or aggregated depth features (if available)
+20: Derived features (per stock, per time step)
+21: returns (log / arithmetic) at multiple horizons
+22: rolling volatility (5, 15, 60-min), ATR
+23: volume-change, volume-profile features
+24: momentum indicators (EMA, RSI, MACD etc.) — only if trader strategy uses these
+25: event flags (earnings, macro release) — if available
+26: Cross-asset features (used by TGNN)
+27: lead-lag cross-correlation matrices (computed windowed)
+28: pairwise Granger-like metrics (directional influence)
+29: normalized returns & volumes for graph edge construction
+30: Labels / outputs
+31: strategy PnL time series (from backtest), drawdowns, trade-level logs (entry/exit/time/size/price)
+32: Data splits
+33: Multiple walk-forward splits (train / validation / test) with non-overlap; reserve the most recent period as final hold-out.
+34: Important notes
+35: No lookahead leakage: ensure signal computation only uses past data up to trade timestamp.
+36: Time alignment: synchronize timestamps across stocks; fill missing bars carefully.
+37: Resolution: minute bars are often sufficient to prototype; if you have tick/LOB, you can later refine execution model.
+39: ML models & where they fit (concise)
+40: TGNN (Temporal GNN)
+41: Node = stock.
+42: Node features = per-stock features (returns, vol, indicators) over recent sequence window.
+43: Edge learning: attention or learned Granger weights that vary over time.
+44: Output: per-node embedding (contextualized) and contagion scores (edge weights).
+45: Execution surrogate
+46: Small network that predicts fill probability and impact given order size, liquidity proxy, volatility, and time-of-day.
+47: Trained on historical execution logs (if available) or fitted parametric model (volume-based impact) otherwise.
+48: Adversarial Market Generator (AMG)
+49: Conditional generator (GAN / diffusion / RNN) that outputs multi-stock sequences conditioned on recent history + TGNN contagion signals.
+50: Objective: find sequences that maximize policy/backtest loss while being plausibility-regularized (critic / likelihood penalty).
+51: Strategy modules
+52: Backtester: deterministic interpreter for trader rules (entry/exit/position sizing). Integrates execution surrogate to convert orders to executed trades.
+53: RL optimizer: policy network (PPO / SAC for continuous actions or discrete bucketized actions) that uses TGNN embeddings + local features to output position sizes or parameter adjustments. Trained with risk-adjusted reward (Sharpe/CVaR/turnover penalties) and adversary in min–max loop.
+54: Counterfactual Explainability module
+55: Fit a lightweight structural causal model (SCM) or probabilistic model mapping operational variables (latency, slippage, order size, commission) to performance metrics (max drawdown, tail loss).
+56: For each backtest, compute counterfactuals by intervention and present the top actionable changes.
+58: Why these pieces and what’s important at each step
+59: TGNN is crucial because cross-stock contagion changes how a strategy performs in stress — using NODE-level embeddings gives the backtester/agent context beyond the single-stock view.
+60: Execution surrogate matters because many strategies break when real execution and slippage are modeled — without it you’ll give misleading advice.
+61: Adversarial generator exposes brittle failure modes your standard backtest misses — it produces realistic “worst plausible” scenarios to test or train against.
+62: RL optimizer helps propose actionable parameter changes or policies that are robust to stress; but it’s optional for an MVP (you can start with rule re-weighting or gradient-based param search).
+63: Counterfactuals are necessary to make the output actionable for traders — they answer the practical “What if latency were 50ms worse?” questions.
+65: 12-week sprint plan (detailed with explanations for each week)
+66: Weeks 1–2 — Data ingestion & standard backtester (foundation)
+67: Goals
+68: Build a robust data pipeline and a deterministic backtester that accepts a trader rule and outputs PnL/trade logs using a simple execution model.
+Key tasks
+69: Gather and clean stock minute-bar data, create walk-forward splits.
+70: Implement feature engineering (returns, vol, indicators) and time synchronization.
+71: Implement a deterministic backtester that: reads strategy (as code or parameterized rule), simulates orders, and outputs PnL/trades. Initially use a simple parametric slippage model (e.g., impact proportional to order size / average volume).
+Why important
+72: Early checks: trader strategy semantics, no lookahead bugs, baseline performance.
+Deliverables
+73: Data store, preprocessor scripts, baseline backtester, example backtest report.
+74: Week 3 — Execution surrogate & realistic fills
+75: Goals
+76: Replace coarse parametric slippage with a learnable execution surrogate so execution is realistic and differentiable for later optimization.
+Key tasks
+77: If execution logs exist: train execution model to predict fill probability and impact. Otherwise, fit parametric model using volume buckets and volatility.
+78: Integrate surrogate into backtester (orders → expected fill/impact → executed PnL).
+Why important
+79: Makes backtests meaningful; crucial for RL and adversarial training.
+Deliverables
+80: Execution model, updated backtester that logs executed trade-level data.
+81: Week 4 — TGNN: cross-asset modelling & embeddings
+82: Goals
+83: Build temporal GNN that learns dynamic inter-stock influence and produces embeddings used by backtester/agent.
+Key tasks
+84: Construct node features (sequence windows) and initial adjacency candidates (correlation/Granger).
+85: Implement TGNN (e.g., GraphWaveNet or TGN-like) that produces per-stock embeddings and dynamic edge weights. Train to predict next-step returns or multi-step returns as supervised pretraining.
+Why important
+86: Provides context: strategies that are profitable in isolation may perform badly under contagion — embeddings capture that.
+Deliverables
+87: Trained TGNN checkpoints, visualizations of learned contagion graphs.
+88: Week 5 — Adversarial Market Generator (AMG) prototype
+89: Goals
+90: Build initial adversarial generator that can produce multi-stock sequences conditioned on recent history + TGNN signals.
+Key tasks
+91: Start with conditional GAN or RNN generator that produces KO sequences. Train discriminator as plausibility critic (distinguish real vs synthetic).
+92: Implement a mechanism to let generator optimize to increase strategy/backtest loss (min–max loop with small capacity first).
+Why important
+93: This will produce “hard” cases to reveal brittle strategies and provide training scenarios for robust optimization.
+Deliverables
+94: AMG producing sample adversarial scenarios and plausibility scores.
+95: Week 6 — Integrate AMG + Backtester: stress-test mode
+96: Goals
+97: Use AMG to run stress-tests: for any trader-submitted strategy, generate adversarial sequences and compute worst-case metrics.
+Key tasks
+98: For each strategy, run ensemble of adversarial samples, compute worst-case PnL, drawdown, and recovery time.
+99: Add report sections showing the top-k adversarial scenarios and their characteristics.
+Why important
+100: Immediate value to trader: shows how strategy breaks under plausible stress.
+Deliverables
+101: Stress-test suite + adversarial-scenario gallery in report.
+102: Week 7 — Robust RL optimizer (prototype)
+103: Goals
+104: Build an RL agent that can suggest parameter changes or policy modifications that improve worst-case performance; train it in the AMG environment.
+Key tasks
+105: Define RL action space: either (A) parameter adjustments to the trader’s rule (e.g., tighter stop, reduced size), or (B) portfolio-level continuous allocations.
+106: Use PPO or SAC with reward = risk-adjusted PnL (Sharpe minus CVaR minus turnover). Start training in historical sim, then add adversarial episodes.
+Why important
+107: Converts backtest insights into actionable strategy improvements.
+Deliverables
+108: RL optimizer that outputs suggested parameter adjustments and validates improvements on hold-out & adversarial scenarios.
+109: Week 8 — Counterfactual Explainability module
+110: Goals
+111: Implement SCM-based counterfactuals producing human-readable recommendations (latency, slippage, order size effects).
+Key tasks
+112: Fit a causal/probabilistic model mapping operational variables + features → PnL metrics (use regression, random forest, or simple structural equations).
+113: For each backtest, generate targeted interventions (e.g., increase latency to 100ms) and compute counterfactual metrics. Rank counterfactuals by impact and actionability.
+114: Integrate with the adversarial scenarios: highlight which counterfactuals reverse the worst-case losses.
+Why important
+115: Traders need prescriptive, not just diagnostic, insights. Counterfactuals explain exactly what operational changes would improve outcomes.
+Deliverables
+116: Counterfactual report generator and some example outputs.
+117: Week 9 — Walk-forward & robust evaluation pipeline
+118: Goals
+119: Implement thorough walk-forward evaluation and worst-case score aggregation (across seeds & adversarial samples).
+Key tasks
+120: Automate nested walk-forward runs: for each fold train TGNN/execution/AMG (or reuse) and evaluate backtests & RL suggestions in held-out windows.
+121: Produce robustness metrics: average, median, and worst-case across folds.
+Why important
+122: Ensures results are not overfitted; provides reproducible evidence.
+Deliverables
+123: Automated evaluation scripts and robustness summary tables.
+124: Week 10 — Ablations & performance tuning
+125: Goals
+126: Quantify contributions of TGNN, AMG adversary, execution surrogate, and RL optimizer via ablation experiments.
+Key tasks
+127: Run experiments: with/without TGNN, with simple vs learned execution surrogate, with/without AMG, RL vs no RL. Analyze differences on worst-case metrics.
+Why important
+128: Demonstrates novelty and justifies model choices for publication/business case.
+Deliverables
+129: Ablation study results and explanatory figures.
+130: Week 11 — UI/report polish & small trader study
+131: Goals
+132: Refine report layout, make counterfactual outputs concise and actionable, and run a small feedback study (3–5 traders/peers) to validate utility.
+Key tasks
+133: Build web/notebook interface that accepts strategy spec, runs backtest+stress+explain, returns report.
+134: Conduct quick user study, collect qualitative feedback and instrument improvements.
+Why important
+135: Validates that outputs are understandable and actionable to real users.
+Deliverables
+136: Polished demo and user feedback notes.
+137: Week 12 — Finalization, reproducibility, write-up
+138: Goals
+139: Wrap experiments, finalize write-up and reproducible repo, prepare results for publication/delivery.
+Key tasks
+140: Freeze code, write README with run recipes, prepare short paper or product presentation with key tables/figures and novelty claims.
+Deliverables
+141: Final repo artifacts, demo, and a concise whitepaper/presentation.
+143: Important design & modelling details (concise how-to)
+144: TGNN design choices
+145: Architecture: GraphWaveNet or temporal attention GNN with GRU/TCN time encoder.
+146: Edge learning: use soft attention over node embeddings each step, optionally regularized toward sparse graphs. Provide both learned adjacency and a simple baseline correlation adjacency.
+147: Loss: supervised next-step return prediction + an auxiliary loss for edge stability (temporal smoothness).
+148: Output: per-stock embedding used as part of the RL state or as features in backtester heuristics.
+149: Execution surrogate specifics
+150: Inputs: order size (abs + % ADV), volatility, bid-ask spread, time-of-day, recent volume.
+151: Outputs: fill_prob (0–1), expected price impact (signed).
+152: Model: simple MLP or small mixture density net if you need impact distribution.
+153: Training: if real execution logs exist, supervised regression; otherwise fit parametric impact functions using observed slippage distribution.
+154: AMG architecture & training
+155: Model family: conditional GAN (fast prototyping) or conditional diffusion (higher fidelity). Condition on recent history + TGNN contagion embedding.
+156: Objective: adversarial max of strategy loss minus plausibility penalty (critic network outputs realism). Use gradient signals to guide generator to produce scenarios harmful to the strategy but still plausible.
+157: Control: bound shock magnitudes and constrain generator via critic likelihood to avoid unrealistic extremes.
+158: RL optimizer specifics
+159: State: per-stock TGNN embedding + recent stock features + portfolio state.
+160: Action: per-stock continuous position sizing (e.g., -1..+1 fraction of capital inside limits) or discrete parameter tweaks for the submitted rule (if you choose parameter-optimizer mode).
+161: Reward: risk-adjusted PnL with penalties: turnover penalty, expected impact penalty, and CVaR penalty. Example:
+Reward = R_t - lambda_impact * Impact - lambda_turn * Turnover - lambda_cvar * CVaR_0.95
+162: Algorithm: PPO for stability (or SAC if continuous stochastic actions and sample-efficiency desired). Use recurrent policy (GRU) to exploit temporal patterns.
+163: Robust training: alternate between training agent (minimize worst-case loss) and training AMG (maximize agent loss) with plausibility constraints.
+164: Counterfactual module
+165: Formulation: Fit SCM or flexible surrogate f(operational_vars, features) -> performance_metrics (use random forest or gradient-boosted model). For counterfactuals, intervene on operational_vars and compute resulting f(...).
+166: Selection logic: rank interventions by expected improvement and feasibility (e.g., reducing latency may be infeasible; reducing order size is feasible). Present top 3 actionable interventions and counterfactual numbers (e.g., "Reducing order size by 25% reduces expected max drawdown from 18% to 12%").
+168: Evaluation metrics (what to report to traders & for research)
+169: Trader-facing: annualized return, Sharpe, max drawdown, max drawdown duration, Sharpe during normal vs adversarial scenarios, expected worst-case PnL over N adversarial draws, execution gap (paper vs exec).
+170: Research-facing: worst-case CVaR, mean worst-case drawdown across walk-forward folds, robustness improvement due to RL optimization (delta in worst-case PnL), TGNN ablation improvements (statistical significance), utility of counterfactual actions (user study results).
+171: Operational: false alarm rate for automated alerts, counterfactual plausibility scores.
+173: Outputs & reports the trader will receive
+174: Standard backtest report — PnL chart, trade list, statistics.
+175: Execution-aware PnL — paper vs executed results, estimated slippage and fill rates.
+176: Stress gallery — top 5 adversarial scenarios (plots + short description: liquidity shock, correlated drop, fast reversal).
+177: Robustness scorecard — average/worst-case metrics across adversarial draws & walk-forward folds.
+178: Counterfactual action list — ranked, actionable interventions (e.g., reduce order size to X, increase stop to Y, accept latency ≤ Z) with predicted effect sizes.
+179: (Optional) Suggested parameter changes — RL-suggested parameter vector with expected PnL improvement and safety constraints.
+181: Novelty (what is new, publishable, and why investigators/traders will care)
+182: Adversarially-driven backtesting: instead of synthetic or handcrafted stress tests, we adversarially generate plausible worst-cases conditioned on cross-asset contagion — closer to real worst-case exposures.
+183: TGNN-conditioned adversary & policy: adversary respects learned contagion structure; policy/backtester leverage TGNN embeddings so recommendations reflect cross-asset dynamics (not just single asset heuristics).
+184: End-to-end execution-aware robust optimization: combine execution surrogate + adversarial training + RL to optimize not just in-sample Sharpe but worst-case realized PnL under execution constraints.
+185: Actionable counterfactuals integrated with adversarial scenarios: combining SCM counterfactuals with adversarial Stress Test results to produce direct deployment guidance — unique blend of prescriptive explainability and robustness for trading.
+These factors together produce a system that both finds plausible failure modes and tells a trader exactly what operational change or parameter tweak would reduce that risk.
+187: Risks, limitations & mitigations
+188: Unrealistic adversary — mitigate by critic/loss penalties and domain constraints; include human-in-the-loop plausibility vetting.
+189: Lack of execution logs — mitigate by parametric execution models and small broker experiments for calibration.
+190: Overfitting RL to simulator — use walk-forward, multiple seeds, adversarial ensembles and hold-out periods.
+191: Trader trust — mitigate with transparent counterfactuals, conservative recommendations, and clear display of uncertainty.
+193: Practical choices & recommendations to start fast (MVP path)
+194: Start with minute bars (not LOB). Implement TGNN with small node count (top N liquid stocks).
+195: Use parametric execution surrogate for MVP; upgrade to learned surrogate once execution logs available.
+196: Prototype AMG as conditional GAN (simpler) then upgrade to diffusion later.
+197: Start RL as parameter-tuner (discrete parameter suggestions) rather than full continuous portfolio RL — easier to validate and explain.
+198: Prioritize counterfactual reports early — they provide immediate trader value even before RL is mature.

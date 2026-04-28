@@ -1,0 +1,1 @@
+# Adversarial market generator module

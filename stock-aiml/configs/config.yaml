@@ -1,0 +1,172 @@
+# =============================================================================
+# STOCK-AIML: Deep Learning Backtesting & Strategy Optimization Platform
+# Main Configuration File
+# =============================================================================
+
+# ─── DATA LAYER ────────────────────────────────────────────────────────────────
+data:
+  raw_dir:          "data/raw"
+  processed_dir:    "data/processed"
+  features_dir:     "data/features"
+  synthetic_dir:     "data/synthetic"
+  default_freq:      "1d"                # daily bars (from given NIFTY 50 data)
+  supported_freqs:   ["1d", "1h", "5m", "1m"]
+  default_index:    "NIFTY 50"
+
+# ─── FEATURE ENGINEERING ──────────────────────────────────────────────────────
+features:
+  # Return horizons (in bars)
+  return_horizons:  [1, 5, 10, 20]
+  # Volatility windows
+  vol_windows:      [5, 10, 20]
+  # Momentum indicators
+  momentum_windows: [5, 10, 20]
+  # Volume windows
+  vol_window:       20
+  # ATR multiplier for stop-loss (if used)
+  atr_multiplier:    2.0
+
+# ─── WALK-FORWARD SPLITS ──────────────────────────────────────────────────────
+splits:
+  n_splits:         3
+  train_ratio:      0.60
+  val_ratio:        0.20
+  test_ratio:       0.20
+  gap_bars:         5                 # bars between train/val/test to prevent leakage
+  min_train_bars:   100              # minimum bars needed in training set
+
+# ─── BACKTESTER ───────────────────────────────────────────────────────────────
+backtester:
+  initial_capital:  1_000_000.0
+  commission_pct:   0.001           # 0.1% per trade (both sides = 0.2%)
+  slippage_bps:     5               # 5 basis points per trade
+  spread_cost_bps:  2               # 2 bps spread assumption
+  latency_ms:       100             # simulated latency in ms
+  position_limit:   1.0             # max fraction of capital per position
+  allow_short:      false
+  min_bars_between_trades: 1       # prevent overtrading in same bar
+
+# ─── EXECUTION SURROGATE ───────────────────────────────────────────────────────
+execution:
+  model_type:       "parametric"    # "parametric" | "learned"
+  # Parametric model parameters
+  impact_coeff:     0.5             # impact = coeff * (order_size/ADV) * volatility
+  fill_rate:        0.85             # base fill probability
+  vol_impact_mult:  1.2              # multiplier on volatility in impact calc
+  spread_factor:    0.5              # how much of spread counts as impact
+
+# ─── TGNN ──────────────────────────────────────────────────────────────────────
+tgnn:
+  node_features_dim:  32
+  embedding_dim:      64
+  hidden_dim:         128
+  num_layers:         3
+  num_heads:          4
+  dropout:            0.1
+  temporal_encoder:   "gru"          # "gru" | "tcn" | "transformer"
+  graph_method:       "attention"   # "attention" | "correlation" | "granger"
+  edge_threshold:     0.3
+  window_size:        20              # bars of history for node features
+  # For single-index MVP: treat index as single node with self-loop
+  use_synthetic_nodes: true          # generate synthetic nodes for graph structure
+
+# ─── ADVERSARIAL MARKET GENERATOR ─────────────────────────────────────────────
+adversarial:
+  model_type:         "conditional_gan"  # "conditional_gan" | "diffusion"
+  latent_dim:         32
+  hidden_dim:         128
+  num_layers:         4
+  # Scenario types
+  scenarios:
+    - type:           "liquidity_shock"
+      magnitude:      0.15           # 15% volume drop
+      duration:       5              # bars
+    - type:           "correlated_selloff"
+      magnitude:      0.10           # 10% drop
+      duration:       10
+    - type:           "volatility_spike"
+      magnitude:      2.0            # 2x vol multiplier
+      duration:       3
+    - type:           "regime_shift"
+      magnitude:      0.05           # 5% persistent shift
+      duration:       20
+    - type:           "fast_reversal"
+      magnitude:      0.08
+      duration:       3
+  num_samples:        50             # adversarial scenarios per stress test
+  plausibility_threshold: 0.6        # discriminator must score above this
+
+# ─── RL OPTIMIZER ─────────────────────────────────────────────────────────────
+rl:
+  algorithm:          "ppo"           # "ppo" | "sac" | "grid_search"
+  state_dim:          128
+  action_type:        "parameter_tune"  # "parameter_tune" | "portfolio"
+  # Parameter tune mode: discrete buckets for each strategy param
+  n_parameter_buckets: 5
+  # PPO hyperparameters
+  lr:                 3e-4
+  gamma:              0.99
+  gae_lambda:         0.95
+  clip_epsilon:       0.2
+  entropy_coef:       0.01
+  value_coef:          0.5
+  n_epochs:           10
+  batch_size:         256
+  max_steps_per_episode: 500
+  # Reward weights
+  reward:
+    sharpe_weight:    1.0
+    cvar_weight:      0.5
+    turnover_weight: 0.2
+    impact_weight:    0.3
+  # Training
+  n_envs:             4               # parallel envs for speed
+  total_timesteps:   100_000
+  use_adversarial_training: true
+
+# ─── COUNTERFACTUAL / XAI ─────────────────────────────────────────────────────
+xai:
+  surrogate_model:   "gradient_boosting"  # "gradient_boosting" | "random_forest" | "linear"
+  n_counterfactuals:  10
+  n_mc_samples:       1000
+  # Intervention variables
+  intervention_vars:
+    - name:          "latency_ms"
+      range:         [50, 200]
+      step:          25
+    - name:          "slippage_bps"
+      range:         [1, 20]
+      step:          2
+    - name:          "order_size_pct"
+      range:         [0.25, 1.0]
+      step:          0.25
+    - name:          "commission_pct"
+      range:         [0.0, 0.003]
+      step:          0.0005
+  confidence_level:   0.95          # CVaR confidence level
+  min_improvement_threshold: 0.01   # min 1% improvement to recommend
+
+# ─── DATABASE ─────────────────────────────────────────────────────────────────
+database:
+  type:               "sqlite"
+  path:               "data/experiments.db"
+
+# ─── EXPERIMENT TRACKING ──────────────────────────────────────────────────────
+mlflow:
+  enabled:            true
+  tracking_uri:       "file:experiments/mlruns"
+  experiment_name:    "stock-aiml"
+
+# ─── REPORTING ────────────────────────────────────────────────────────────────
+reporting:
+  output_dir:         "reports"
+  default_format:     "json"         # "json" | "csv" | "pdf"
+  include_plots:       true
+  plot_width:         900
+  plot_height:        500
+
+# ─── LOGGING ──────────────────────────────────────────────────────────────────
+logging:
+  level:              "INFO"
+  format:             "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+  file:               "logs/stock-aiml.log"
