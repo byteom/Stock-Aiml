@@ -1,6 +1,11 @@
 """Streamlit dashboard — main entry point with sidebar navigation."""
 from __future__ import annotations
 
+import sys
+import os
+# Add the root 'stock-aiml' directory to sys.path so 'dashboard.' and 'backend.' modules can be found
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import streamlit as st
 
 # ── Page config ──────────────────────────────────────────────────────────────
@@ -11,6 +16,18 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Hide Streamlit's default auto-generated sidebar navigation
+st.markdown(
+    """
+    <style>
+        [data-testid="stSidebarNav"] {
+            display: none;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 st.sidebar.markdown("# 📈 Stock-AIML")
 st.sidebar.markdown("### Deep Learning Backtesting & Strategy Optimization")
@@ -18,6 +35,7 @@ st.sidebar.divider()
 st.sidebar.caption("v1.0.0")
 
 PAGES = {
+    "ℹ️ About Project":    "about_project",
     "📁 Dataset Upload":   "dataset_upload",
     "⚙️ Strategy Config":  "strategy_config",
     "▶️ Run Backtest":      "backtest_run",
@@ -25,11 +43,13 @@ PAGES = {
     "⚡ Stress Test":      "stress_test",
     "🔍 Explanation":      "explanation",
     "📤 Export":           "export",
+    "📚 API Docs":         "api_docs",
+    "🧪 MLflow Tracking":  "mlflow_tracking",
 }
 
 # Store selected page
 if "current_page" not in st.session_state:
-    st.session_state["current_page"] = "📁 Dataset Upload"
+    st.session_state["current_page"] = "ℹ️ About Project"
 
 st.session_state["current_page"] = st.sidebar.radio(
     "Navigation",
@@ -38,9 +58,6 @@ st.session_state["current_page"] = st.sidebar.radio(
 )
 
 st.sidebar.divider()
-st.sidebar.markdown("**Quick Links**")
-st.sidebar.markdown("- [API Docs](/docs)" if True else "")
-st.sidebar.markdown("- [MLflow](/)" if True else "")
 
 # ── Load the selected page ───────────────────────────────────────────────────
 page_module_name = PAGES[st.session_state["current_page"]]

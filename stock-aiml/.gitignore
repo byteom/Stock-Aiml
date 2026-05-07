@@ -61,15 +61,15 @@ coverage.xml
 *.sqlite
 *.bak
 
-# Models
-/models/
-*.pt
-*.pth
-*.h5
-*.ckpt
-*.onnx
-*.joblib
-*.sav
+# Models (Commented out to push models for Railway deployment)
+# /models/
+# *.pt
+# *.pth
+# *.h5
+# *.ckpt
+# *.onnx
+# *.joblib
+# *.sav
 
 # Docker
 *.pid
