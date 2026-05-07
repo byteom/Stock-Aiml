@@ -46,7 +46,7 @@ async def run_backtest(req: BacktestRequest) -> BacktestResponse:
     try:
         loader.load_csv(path)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to load data: {e}")
+        raise HTTPException(status_code=500, detail="Data file not found on server. Please use the Streamlit UI to upload data.")
 
     # ── 2. Walk-forward split ───────────────────────────────────────────────
     splits = loader.create_walk_forward_splits(n_splits=3)

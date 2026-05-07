@@ -29,8 +29,11 @@ async def run_optimize(req: OptimizeRequest) -> OptimizeResponse:
         if not path.exists():
             path = Path(__file__).parents[4] / "data.csv"
 
-    loader = DataLoader(path)
-    loader.load_csv(path)
+    try:
+        loader = DataLoader(path)
+        loader.load_csv(path)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Data file not found on server. Please use the Streamlit UI to upload data.")
     splits = loader.create_walk_forward_splits(n_splits=3)
     test_df = splits[0]["test"]
 
