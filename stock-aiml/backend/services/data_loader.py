@@ -241,6 +241,9 @@ class DataLoader:
         if abs(total - 1.0) > 1e-6:
             raise InvalidDateRangeError(f"Split ratios must sum to 1.0, got {total}")
 
+        train_end_frac = train_ratio
+        val_end_frac   = train_ratio + val_ratio
+
         # Reduce minimum required bars if we have very small datasets uploaded via app
         min_required = int(min_train_bars / train_ratio)
         if n < min_required:
@@ -261,9 +264,6 @@ class DataLoader:
         step = int(n * test_ratio)
         if step < 1:
             step = 1
-
-        train_end_frac = train_ratio
-        val_end_frac   = train_ratio + val_ratio
 
         for i in range(n_splits):
             offset = i * step
