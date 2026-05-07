@@ -48,14 +48,19 @@ def render():
             from backend.services.stress_generator import AdversarialMarketGenerator
 
             from pathlib import Path as _Path
-            # Resolve data.csv from project root
-            project_root = _Path(__file__).parents[3]
-            data_path = project_root / "data.csv"
-            if not data_path.exists():
-                data_path = _Path("C:/Users/anwee/Desktop_1/Learning-Season/Stock-Aiml/data.csv")
+            # Resolve data
+            if "uploaded_data" in st.session_state:
+                loader = DataLoader()
+                loader.load_preset_df(st.session_state["uploaded_data"])
+            else:
+                project_root = _Path(__file__).parents[3]
+                data_path = project_root / "data.csv"
+                if not data_path.exists():
+                    data_path = _Path("C:/Users/anwee/Desktop_1/Learning-Season/Stock-Aiml/data.csv")
 
-            loader = DataLoader(data_path)
-            loader.load_csv(data_path)
+                loader = DataLoader(data_path)
+                loader.load_csv(data_path)
+                
             splits = loader.create_walk_forward_splits(n_splits=3)
             test_df = splits[0]["test"]
 

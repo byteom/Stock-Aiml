@@ -35,9 +35,14 @@ def render():
             start = time.time()
 
             # Load data
-            data_path = Path(__file__).parents[3] / "data.csv"
-            loader = DataLoader(data_path)
-            loader.load_csv(data_path)
+            if "uploaded_data" in st.session_state:
+                loader = DataLoader()
+                loader.load_preset_df(st.session_state["uploaded_data"])
+            else:
+                data_path = Path(__file__).parents[3] / "data.csv"
+                loader = DataLoader(data_path)
+                loader.load_csv(data_path)
+                
             splits = loader.create_walk_forward_splits(n_splits=3)
             test_df = splits[0]["test"]
 

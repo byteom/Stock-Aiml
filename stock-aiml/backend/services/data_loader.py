@@ -60,6 +60,52 @@ class DataLoader:
 
     # ── CSV loading ──────────────────────────────────────────────────────────
 
+    def _synthesize_volume(self, df: pd.DataFrame) -> pd.Series:
+        range_proxy = (df["high"] - df["low"]).abs()
+        return (range_proxy / range_proxy.median() * 1e6).fillna(1e6).astype(float)
+
+    def load_preset_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Load data from an existing DataFrame directly.
+        """
+        self._raw_df = df.copy()
+        
+        # Standardize empty headers
+        df.columns = df.columns.str.strip().str.lower()
+        
+        # Process and validate
+        df = self._standardize_columns(df)
+        self._processed_df = df
+        return df
+
+    def _standardize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Check columns
+        required = {"open", "high", "low", "close"}
+        if not required.issubset(set(df.columns)):
+            # If missing raw columns, they might have capital letters
+            col_map = {c: c.lower() for c in df.columns}
+            df.rename(columns=col_map, inplace=True)
+            if not required.issubset(set(df.columns)):
+                raise ValueError(f"Missing required price columns: {required - set(df.columns)}")
+
+        # Find date column
+        date_cols = [c for c in df.columns if c in ["date", "timestamp", "time", "datetime"]]
+        date_col = date_cols[0] if date_cols else df.columns[0]
+        
+        # Ensure timestamp exists
+        if "timestamp" not in df.columns:
+            df["timestamp"] = df[date_col]
+            
+        df["timestamp"] = self._parse_dates(df["timestamp"])
+        df = df.sort_values("timestamp")
+        df = df.reset_index(drop=True)
+        
+        # Generate volume if missing
+        if "volume" not in df.columns:
+            df["volume"] = self._synthesize_volume(df)
+            
+        return df
+
     def load_csv(
         self,
         path: str | Path | None = None,
