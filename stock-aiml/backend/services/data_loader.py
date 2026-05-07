@@ -241,10 +241,20 @@ class DataLoader:
         if abs(total - 1.0) > 1e-6:
             raise InvalidDateRangeError(f"Split ratios must sum to 1.0, got {total}")
 
-        if n < min_train_bars * (1 / train_ratio):
-            raise InsufficientDataError(
-                f"Need at least {int(min_train_bars / train_ratio)} bars for walk-forward, got {n}"
-            )
+        # Reduce minimum required bars if we have very small datasets uploaded via app
+        min_required = int(min_train_bars / train_ratio)
+        if n < min_required:
+            if n > 5:
+                # Bypass requirement for tiny demo uploads
+                train_end = int(n * train_ratio)
+                val_end = int(n * val_end_frac)
+                return [{
+                    "train": df.iloc[:train_end],
+                    "val": df.iloc[train_end:val_end],
+                    "test": df.iloc[val_end:]
+                }]
+            else:
+                raise InsufficientDataError(f"Need at least 6 bars to split data, got {n}")
 
         splits = []
         # Walk forward in steps of test_ratio
