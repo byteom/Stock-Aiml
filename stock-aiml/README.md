@@ -29,7 +29,20 @@ A production-grade, modular backtesting and strategy optimization system for sto
 
 ## Quick Start
 
-### 1. Install dependencies
+### Easy 1-Click Local Runner (New)
+
+We've added a one-click script to run both the FastAPI Backend and Streamlit Dashboard simultaneously on your local machine.
+
+- **Windows:** Double-click on `run_local.bat` (or run it via terminal).
+- **Mac/Linux:** Run `bash run_local.sh`.
+
+*The script will automatically check Python, create a virtual environment, install requirements, and start both servers for you!*
+
+---
+
+### Manual Setup (Step-by-step)
+
+**1. Install dependencies**
 
 ```bash
 cd stock-aiml
