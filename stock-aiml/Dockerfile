@@ -20,4 +20,5 @@ COPY . .
 EXPOSE 8501 8000
 
 # ── Entry point ────────────────────────────────────────────────────────────────
-CMD ["streamlit", "run", "dashboard/app.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+# Use a startup script to run both backend and frontend
+CMD ["sh", "start.sh"]
