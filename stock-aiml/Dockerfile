@@ -5,7 +5,7 @@ WORKDIR /app
 # ── System deps for weasyprint (PDF generation) ───────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
-    libffi6 shared-mime-info libxml2 libxslt1.1 && rm -rf /var/lib/apt/lists/*
+    libffi8 shared-mime-info libxml2 libxslt1.1 && rm -rf /var/lib/apt/lists/*
 
 # ── Python deps ───────────────────────────────────────────────────────────────
 COPY requirements.txt .
