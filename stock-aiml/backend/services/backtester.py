@@ -198,8 +198,8 @@ class Backtester:
         """
         params = strategy_params or {}
         n = len(df)
-        if n < 20:
-            raise ValueError(f"DataFrame too short: {n} bars (minimum 20)")
+        if n < 2:
+            raise ValueError(f"DataFrame too short: {n} bars (minimum 2)")
 
         # ── Generate signals ──────────────────────────────────────────────
         signal_fn = STRATEGY_SIGNALS.get(strategy_name)
